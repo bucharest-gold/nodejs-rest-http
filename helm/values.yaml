@@ -1,0 +1,90 @@
+# Default values for nodejs-rest-http-helm.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+# If you app doesnt make use of certain parts (e.g. service accounts) just leave them blank with `{}`
+
+replicaCount: 1
+
+name: nodejs-rest-http-example
+
+# Change this to your image if you wish to use that instead
+image:
+  repository: nodejs-rest-http
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: 1.0.0
+
+buildtype: Kubernetes
+#Kubernetes or Openshift
+
+imagePullSecrets: 
+  - name: my-pull-secret
+nameOverride: ""
+fullnameOverride: ""
+
+uri: https://github.com/AshCripps/nodejs-rest-http/tree/add-helm
+ref: master
+contextDir:
+
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+replicas: 1
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths: []
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+   limits:
+     cpu: 400m
+     memory: 600Mi
+   requests:
+     cpu: 200m
+     memory: 300Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

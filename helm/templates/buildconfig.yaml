@@ -1,0 +1,28 @@
+{{- if eq .Values.buildtype "Openshift" }}
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: {{ .Values.name }}
+spec:
+  source:
+    type: Git
+    git:
+      uri: {{ .Values.uri }}
+      ref: {{ .Values.ref }}
+      {{- if .Values.contextDir }}
+      contextDir: {{ .Values.contextDir }}
+      {{- end }}
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: {{ include "nodejs.imageName" . }}
+  {{- if .Values.resources }}
+  resources: {{- toYaml .Values.resources | nindent 4 }}
+  {{- end }}
+  triggers:
+    - type: ConfigChange
+{{- end }}

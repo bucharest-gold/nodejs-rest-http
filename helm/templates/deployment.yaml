@@ -1,0 +1,139 @@
+{{- if eq .Values.buildtype "Kubernetes" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "helm-chart.fullname" . }}
+  labels:
+    {{- include "helm-chart.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "helm-chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "helm-chart.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "helm-chart.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+
+{{- if eq .Values.buildtype "Openshift" }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nodejs.name" . }}
+  labels:
+    {{- include "nodejs.labels" . | nindent 4 }}
+  annotations:
+    image.openshift.io/triggers: |-
+      [
+        {
+          "from":{
+            "kind":"ImageStreamTag",
+            "name":"{{ include "nodejs.imageName" . }}"
+          },
+          "fieldPath":"spec.template.spec.containers[0].image"
+        }
+      ]
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      {{- include "nodejs.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "nodejs.labels" . | nindent 8 }}
+    spec:
+{{- if .Values.initContainers }}
+      initContainers:
+        {{- tpl (toYaml .Values.deploy.initContainers) . | nindent 8 }}
+{{- end }}
+      containers:
+        - name: web
+          image: {{ include "nodejs.imageName" . }}
+          ports:
+{{- range .Values.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .targetPort }}
+              protocol: {{ .protocol }}
+{{- end }}
+{{- if .Values.resources }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+{{- end }}
+{{- if .Values.livenessProbe }}
+          livenessProbe:
+            {{- tpl (toYaml .Values.livenessProbe) . | nindent 12 }}
+{{- end }}
+{{- if .Values.readinessProbe }}
+          readinessProbe:
+            {{- tpl (toYaml .Values.readinessProbe) . | nindent 12 }}
+{{- end }}
+{{- if .Values.env }}
+          env:
+            {{- tpl (toYaml .Values.env) . | nindent 12 }}
+{{- end }}
+{{- if .Values.envFrom }}
+          envFrom:
+            {{- tpl (toYaml .Values.envFrom) . | nindent 12 }}
+{{- end }}
+          volumeMounts:
+{{- if .Values.volumeMounts }}
+            {{- tpl (toYaml .Values.volumeMounts) . | nindent 12 }}
+{{- end }}
+{{- if .Values.extraContainers }}
+        {{- tpl (toYaml .Values.extraContainers) . | nindent 8 }}
+{{- end }}
+      volumes:
+{{- if .Values.volumes }}
+        {{- tpl (toYaml .Values.volumes) . | nindent 8 }}
+{{- end }}
+
+{{- end }}
